@@ -1,0 +1,1101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Snakes & Ladders</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yatra+One&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<style>
+/* Layout: square toy board on the left, score cards stacked in a rail on the right; on phones the dice dock to the bottom edge. */
+:root {
+  --bg: #E6EBF1;
+  --surface: #FFFFFF;
+  --fg: #1C2340;
+  --muted: #5A6382;
+  --line: #CDD4E2;
+  --accent: #D9432B;
+  --frame: #1C2340;
+  --display: "Yatra One", "Georgia", serif;
+  --body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10172A; --surface: #19233D; --fg: #E8EBF5; --muted: #9AA3C0; --line: #2C3858;
+    --accent: #F2694F; --frame: #05080F; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10172A; --surface: #19233D; --fg: #E8EBF5; --muted: #9AA3C0; --line: #2C3858;
+  --accent: #F2694F; --frame: #05080F; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px 28px; align-items: start; }
+header.top { grid-column: 1 / -1; }
+@media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); } }
+header.top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(28px, 5vw, 42px); line-height: 1.05; margin: 0; letter-spacing: .01em; text-wrap: balance; }
+h1 .amp { color: var(--accent); }
+.sub { color: var(--muted); margin: 0; font-size: 14px; }
+
+.boardBox { position: relative; width: 100%; margin: 0 auto; aspect-ratio: 1; max-width: 660px; padding: 8px; border-radius: 14px; background: var(--frame); box-shadow: 0 18px 40px -18px rgba(10,15,35,.55); }
+canvas { display: block; width: 100%; height: 100%; border-radius: 6px; touch-action: manipulation; }
+canvas.aiming { cursor: crosshair; }
+.winner { position: absolute; inset: 8px; border-radius: 6px; display: grid; place-items: center; background: rgba(16,22,42,.62); backdrop-filter: blur(2px); }
+.winCard { background: var(--surface); color: var(--fg); padding: 24px 28px; border-radius: 12px; text-align: center; display: grid; gap: 12px; max-width: 80%; }
+.winCard h2 { font-family: var(--display); font-weight: 400; font-size: 28px; margin: 0; text-wrap: balance; }
+.toast { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: var(--surface); color: var(--fg); padding: 8px 16px; border-radius: 999px; font-family: var(--display); font-size: clamp(16px, 3vw, 21px); white-space: nowrap; box-shadow: 0 8px 24px -8px rgba(10,15,35,.5); animation: pop .35s ease-out; pointer-events: none; z-index: 2; }
+.toast svg { width: 24px; height: 24px; flex: none; }
+@keyframes pop { from { transform: translateX(-50%) scale(.6); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
+.choice { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); width: min(92%, 460px); background: var(--surface); color: var(--fg); border-radius: 14px; padding: 14px; box-shadow: 0 10px 30px -8px rgba(10,15,35,.6); display: grid; gap: 10px; text-align: center; z-index: 3; }
+.choice p { margin: 0; font-family: var(--display); font-size: clamp(17px, 3.2vw, 22px); line-height: 1.2; text-wrap: balance; }
+.choiceBtns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.choiceBtns button { display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-radius: 10px; border: 2px solid var(--line); background: var(--bg); color: var(--fg); font-weight: 700; font-size: 15px; }
+.choiceBtns button.primary { border-color: var(--accent); }
+.choiceBtns svg { width: 22px; height: 22px; }
+
+.panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+.label { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+
+.players { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.players li { display: grid; grid-template-columns: 22px minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; border: 1px solid transparent; }
+.players li.active { border-color: var(--line); background: color-mix(in srgb, var(--bg) 60%, var(--surface)); }
+.dot { width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255,255,255,.7); }
+.pname { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pname small { font-weight: 500; color: var(--muted); margin-left: 4px; }
+.pname svg { vertical-align: -3px; margin-left: 4px; }
+.pos { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+.pos b { color: var(--fg); font-size: 15px; }
+
+.rollRow { display: flex; align-items: center; gap: 16px; }
+.die { width: 72px; height: 72px; flex: none; border-radius: 14px; background: #FFFDF7; border: 2px solid var(--fg); display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 10px; gap: 2px; transition: transform .12s; }
+.die.shake { transform: rotate(-8deg) scale(1.04); }
+.pip { width: 12px; height: 12px; border-radius: 50%; place-self: center; background: transparent; }
+.pip.on { background: #1C2340; }
+.rollCol { display: grid; gap: 8px; min-width: 0; flex: 1; }
+button { font: inherit; cursor: pointer; }
+.btn { appearance: none; border: 0; border-radius: 10px; padding: 12px 16px; font-weight: 700; font-size: 16px; background: var(--accent); color: #fff; box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 60%, #000); }
+.btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 60%, #000); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); box-shadow: none; font-size: 14px; padding: 8px 12px; }
+.btn.ghost.small { font-size: 12px; padding: 5px 10px; }
+.powerBtns { display: flex; flex-wrap: wrap; gap: 6px; }
+.powerBtns .btn { display: flex; align-items: center; gap: 6px; flex: 1; justify-content: center; }
+.powerBtns svg { width: 20px; height: 20px; }
+:focus-visible { outline: 3px solid #2F5BD3; outline-offset: 2px; }
+.status { font-size: 14px; color: var(--muted); min-height: 1.5em; }
+.hint { font-size: 12px; color: var(--muted); margin: 0; }
+.hintRow { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 12px; }
+
+.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; max-height: 230px; overflow-y: auto; }
+.log li { display: grid; grid-template-columns: 10px minmax(0,1fr); gap: 8px; align-items: baseline; }
+.log li .d { width: 8px; height: 8px; border-radius: 50%; }
+.log .tag { font-weight: 700; }
+.log .up { color: #1E9A5A; }
+.log .down { color: var(--accent); }
+.empty { color: var(--muted); font-size: 13px; }
+
+.powers { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 13px; }
+.powers li { display: grid; grid-template-columns: 24px minmax(0,1fr); gap: 10px; align-items: start; }
+.powers svg { width: 22px; height: 22px; }
+.powers b { display: block; font-size: 14px; }
+
+details summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+details summary::-webkit-details-marker { display: none; }
+details summary::after { content: "+"; font-size: 18px; color: var(--muted); }
+details[open] summary::after { content: "–"; }
+.setup { display: grid; gap: 12px; margin-top: 12px; }
+.seg { display: flex; gap: 6px; }
+.seg button { flex: 1; padding: 7px 0; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--fg); font-weight: 600; }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.prow { display: grid; grid-template-columns: 14px minmax(0,1fr) 110px; gap: 8px; align-items: center; }
+.prow input, .prow select { font: inherit; font-size: 14px; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); min-width: 0; width: 100%; }
+.rules { font-size: 13px; color: var(--muted); margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+
+@media (max-width: 639px) {
+  body { padding-bottom: 170px; }
+  .turnCard { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; border-radius: 16px 16px 0 0; border-bottom: 0; box-shadow: 0 -8px 24px -10px rgba(10,15,35,.35);
+    padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .turnCard .label, .turnCard .hint { display: none; }
+  .turnCard .hintRow { margin-top: 6px; justify-content: flex-end; }
+  .die { width: 58px; height: 58px; padding: 8px; }
+  .pip { width: 10px; height: 10px; }
+  .toast { top: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .die { transition: none; } .toast { animation: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Snakes <span class="amp">&amp;</span> Ladders</h1>
+    <p class="sub">Born in India as Moksha Patam: ladders for virtues, snakes for vices.</p>
+  </header>
+
+  <div class="boardBox" id="boardBox">
+    <canvas id="board" aria-label="Snakes and ladders board"></canvas>
+    <div class="toast" id="toast" hidden></div>
+    <div class="choice" id="choice" hidden><p id="choiceText"></p><div class="choiceBtns" id="choiceBtns"></div></div>
+    <div class="winner" id="winner" hidden>
+      <div class="winCard">
+        <h2 id="winText">You reached 100</h2>
+        <button class="btn" id="againBtn">Play again</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <section class="card turnCard">
+      <p class="label">Turn</p>
+      <div class="rollRow">
+        <div class="die" id="die" aria-hidden="true"></div>
+        <div class="rollCol">
+          <button class="btn" id="rollBtn">Roll</button>
+          <div class="powerBtns">
+            <button class="btn ghost" id="shootBtn" type="button" hidden><span class="ic" data-icon="gun"></span><span>Shoot a snake</span></button>
+            <button class="btn ghost" id="mineBtn" type="button" hidden><span class="ic" data-icon="mine"></span><span>Place a mine</span></button>
+          </div>
+          <div class="status" id="status" aria-live="polite"></div>
+        </div>
+      </div>
+      <div class="hintRow"><p class="hint">Press Space to roll.</p><button class="btn ghost small" id="soundBtn" type="button" aria-pressed="true">Sound on</button></div>
+    </section>
+
+    <section class="card">
+      <p class="label">Players</p>
+      <ul class="players" id="players"></ul>
+    </section>
+
+    <section class="card">
+      <p class="label">Power-ups</p>
+      <ul class="powers">
+        <li><span class="ic" data-icon="shield"></span><span><b>Shield</b>When you land on a snake, block it and stay put.</span></li>
+        <li><span class="ic" data-icon="sword"></span><span><b>Sword</b>When you land on a snake, chop it. That snake is gone for everyone.</span></li>
+        <li><span class="ic" data-icon="gun"></span><span><b>Gun</b>Before you roll, shoot any snake on the board. Or use it on a snake you land on.</span></li>
+        <li><span class="ic" data-icon="mine"></span><span><b>Mine</b>Before you roll, hide it on any empty square. Whoever steps on it next, even you, gets blasted to a random square. It could be way ahead or way back.</span></li>
+        <li><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M2 4.5h15" stroke="#1C2340" stroke-width="1.5" stroke-linecap="round"/><path d="M9.5 4.5v2.5" stroke="#1C2340" stroke-width="1.5"/><path d="M13 11h5.5" stroke="#E0A21C" stroke-width="2.2" stroke-linecap="round"/><ellipse cx="9" cy="11" rx="6" ry="4" fill="#FFC93C" stroke="#1C2340" stroke-width="1"/><ellipse cx="7" cy="10.5" rx="2.6" ry="2" fill="#8FD3FF"/><path d="M4 17.5h9M6 15v2.5M11 15v2.5" stroke="#1C2340" stroke-width="1.2" stroke-linecap="round"/></svg><span><b>Helicopter</b>Every so often it lands on a random square and waits there for 6 turns. End your move on its square or right next to it, and it flies you 2 rows up.</span></li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <p class="label">Moves</p>
+      <ul class="log" id="log"></ul>
+    </section>
+
+    <section class="card">
+      <details id="setupBox">
+        <summary>Game setup</summary>
+        <div class="setup">
+          <div>
+            <p class="label">Number of players</p>
+            <div class="seg" id="countSeg">
+              <button type="button" data-n="2">2</button>
+              <button type="button" data-n="3">3</button>
+              <button type="button" data-n="4">4</button>
+            </div>
+          </div>
+          <div id="setupRows" style="display:grid;gap:8px"></div>
+          <ul class="rules">
+            <li>You need the exact roll to land on 100.</li>
+            <li>Rolling a 6 earns another turn.</li>
+            <li>You can hold one of each power-up. When you land on a snake, you choose which one to use, or save them and slide down.</li>
+            <li>A mine goes off when anyone steps on it, even while passing over it.</li>
+          </ul>
+          <button class="btn ghost" id="newBtn" type="button">Start new game</button>
+        </div>
+      </details>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+const END = 100;
+const LADDERS = {1:38, 4:14, 9:31, 21:42, 28:84, 36:44, 51:67, 71:91, 80:100};
+const SNAKES  = {16:6, 47:26, 49:11, 56:53, 62:19, 64:60, 87:24, 93:73, 95:75, 98:78};
+const SHIELDS = [12, 33, 58, 77];
+const SWORDS  = [25, 45, 69, 89];
+const GUNS    = [18, 39, 54, 83];
+const MINESQ  = [22, 41, 66, 85];
+const SPECIAL = new Set([...Object.keys(LADDERS), ...Object.values(LADDERS), ...Object.keys(SNAKES), ...Object.values(SNAKES)].map(Number));
+const POWER = new Set([...SHIELDS, ...SWORDS, ...GUNS, ...MINESQ]);
+const COLORS = ["#D9432B", "#2F5BD3", "#1E9A5A", "#8A3FC2"];
+const SNAKE_COLORS = [["#3E8E41","#2B6630"],["#C9781E","#8E5210"],["#2E7F8C","#1D5660"],["#9C3B5A","#6E2640"],["#6B8E23","#4B6618"]];
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const ICONS = {
+  shield: '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M3 4 Q10 1 17 4 L17 9 Q16 15 10 19 Q4 15 3 9 Z" fill="#2F7FD8" stroke="#fff" stroke-width="1.5"/><path d="M10 5v10" stroke="#fff" stroke-width="2"/></svg>',
+  sword: '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><g transform="rotate(45 10 10)"><path d="M9 1h2v12H9z" fill="#C8D0DC" stroke="#5A6382" stroke-width=".8"/><path d="M6 13h8v2H6z" fill="#C9921E"/><path d="M9.2 15h1.6v3.5H9.2z" fill="#7A4E22"/></g></svg>',
+  gun: '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M2 5h14a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H10l-1 2H8l-1 6H3l1.5-8H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" fill="#F2A33A" stroke="#7A4E22" stroke-width="1" stroke-linejoin="round"/><path d="M17 5.5h2v4h-2z" fill="#2F5BD3"/></svg>',
+  mine: '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M12.5 6.5 Q14 3.5 16.5 4" fill="none" stroke="#7A4E22" stroke-width="1.6" stroke-linecap="round"/><circle cx="17" cy="3.6" r="1.9" fill="#FFB020"/><circle cx="9" cy="12" r="6.5" fill="#22263A" stroke="#fff" stroke-width="1"/><circle cx="6.8" cy="9.8" r="1.6" fill="#fff" opacity=".55"/></svg>',
+};
+ICONS.heli = '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M2 4.5h15" stroke="#1C2340" stroke-width="1.5" stroke-linecap="round"/><path d="M9.5 4.5v2.5" stroke="#1C2340" stroke-width="1.5"/><path d="M13 11h5.5" stroke="#E0A21C" stroke-width="2.2" stroke-linecap="round"/><ellipse cx="9" cy="11" rx="6" ry="4" fill="#FFC93C" stroke="#1C2340" stroke-width="1"/><ellipse cx="7" cy="10.5" rx="2.6" ry="2" fill="#8FD3FF"/><path d="M4 17.5h9M6 15v2.5M11 15v2.5" stroke="#1C2340" stroke-width="1.2" stroke-linecap="round"/></svg>';
+const HELI_TURNS = 6;
+const GUN_BODY = new Path2D("M2 5h14a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H10l-1 2H8l-1 6H3l1.5-8H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"), GUN_TIP = new Path2D("M17 5.5h2v4h-2z");
+
+const $ = id => document.getElementById(id);
+document.querySelectorAll(".ic[data-icon]").forEach(el => { el.outerHTML = ICONS[el.dataset.icon]; });
+const canvas = $("board"), ctx = canvas.getContext("2d"), boardBox = $("boardBox");
+let S = 60, dpr = 1, boardImg = null, COLS = 10, ROWS = 10;
+
+let setup = [
+  {name: "Yatin", type: "human"},
+  {name: "Arjun", type: "human"},
+  {name: "Computer", type: "cpu"},
+  {name: "Ravi", type: "cpu"},
+];
+let count = 3;
+let players = [], turn = 0, busy = false, winner = null, log = [], gameId = 0, aiTimer = null, lastRoll = 1;
+let heli = null, heliCool = 3, heliAt = null, heliLooping = false;
+let removed = new Set(), mines = new Set(), fading = null, toastTimer = null, aiming = false, shot = null, blast = null, hoverCell = null;
+
+// ---------- geometry (cell units) ----------
+function cellPt(n) {
+  if (n <= 0) return {x: -0.6, y: ROWS - 0.5};
+  const r = Math.floor((n - 1) / COLS);
+  let c = (n - 1) % COLS;
+  if (r % 2) c = COLS - 1 - c;
+  return {x: c + 0.5, y: ROWS - 1 - r + 0.5};
+}
+function cellAt(x, y) {
+  const col = Math.floor(x), rt = Math.floor(y);
+  if (col < 0 || col >= COLS || rt < 0 || rt >= ROWS) return null;
+  const r = ROWS - 1 - rt, c = r % 2 ? COLS - 1 - col : col;
+  return r * COLS + c + 1;
+}
+function bez(p0, p1, p2, p3, t) {
+  const u = 1 - t;
+  return {
+    x: u*u*u*p0.x + 3*u*u*t*p1.x + 3*u*t*t*p2.x + t*t*t*p3.x,
+    y: u*u*u*p0.y + 3*u*u*t*p1.y + 3*u*t*t*p2.y + t*t*t*p3.y,
+  };
+}
+let snakePaths = {};
+function buildPaths() {
+  snakePaths = {};
+  Object.entries(SNAKES).forEach(([h, t], i) => {
+    const H = cellPt(+h), T = cellPt(t);
+    const dx = T.x - H.x, dy = T.y - H.y, L = Math.hypot(dx, dy) || 1;
+    const px = -dy / L, py = dx / L;
+    const a = Math.min(1.6, 0.35 + L * 0.18) * (i % 2 ? 1 : -1);
+    const c1 = {x: H.x + dx*0.3 + px*a, y: H.y + dy*0.3 + py*a};
+    const c2 = {x: H.x + dx*0.7 - px*a, y: H.y + dy*0.7 - py*a};
+    snakePaths[h] = {H, T, c1, c2, color: SNAKE_COLORS[i % SNAKE_COLORS.length]};
+  });
+}
+function liveSnakes() { return Object.keys(SNAKES).map(Number).filter(h => !removed.has(h)); }
+function validMine(n) { return n != null && n > 1 && n < END && !SPECIAL.has(n) && !POWER.has(n) && !mines.has(n) && !(heli && heli.pos === n); }
+
+// ---------- icons on canvas ----------
+function drawShieldIcon(g, x, y, r) {
+  g.beginPath();
+  g.moveTo(x - r*.8, y - r*.75); g.quadraticCurveTo(x, y - r*1.05, x + r*.8, y - r*.75);
+  g.lineTo(x + r*.8, y - r*.1); g.quadraticCurveTo(x + r*.7, y + r*.65, x, y + r);
+  g.quadraticCurveTo(x - r*.7, y + r*.65, x - r*.8, y - r*.1); g.closePath();
+  g.fillStyle = "#2F7FD8"; g.fill();
+  g.lineWidth = Math.max(1.5, r*.16); g.strokeStyle = "#fff"; g.stroke();
+  g.beginPath(); g.moveTo(x, y - r*.6); g.lineTo(x, y + r*.6); g.lineWidth = Math.max(1.5, r*.2); g.stroke();
+}
+function drawSwordIcon(g, x, y, r) {
+  g.save(); g.translate(x, y); g.rotate(Math.PI / 4);
+  g.fillStyle = "#D5DCE6"; g.strokeStyle = "#5A6382"; g.lineWidth = Math.max(1, r*.07);
+  g.beginPath(); g.moveTo(-r*.13, r*.35); g.lineTo(-r*.13, -r*.8); g.lineTo(0, -r*1.05); g.lineTo(r*.13, -r*.8); g.lineTo(r*.13, r*.35); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = "#C9921E"; g.fillRect(-r*.42, r*.33, r*.84, r*.16);
+  g.fillStyle = "#7A4E22"; g.fillRect(-r*.09, r*.49, r*.18, r*.38);
+  g.fillStyle = "#C9921E"; g.beginPath(); g.arc(0, r*.92, r*.12, 0, Math.PI*2); g.fill();
+  g.restore();
+}
+function drawGunIcon(g, x, y, r) {
+  g.save(); g.translate(x - r, y - r); g.scale(r / 10, r / 10);
+  g.fillStyle = "#F2A33A"; g.fill(GUN_BODY); g.strokeStyle = "#7A4E22"; g.lineWidth = 1.1; g.lineJoin = "round"; g.stroke(GUN_BODY);
+  g.fillStyle = "#2F5BD3"; g.fill(GUN_TIP);
+  g.restore();
+}
+function drawMineIcon(g, x, y, r) {
+  g.save(); g.translate(x - r, y - r); g.scale(r / 10, r / 10);
+  g.strokeStyle = "#7A4E22"; g.lineWidth = 1.6; g.lineCap = "round";
+  g.beginPath(); g.moveTo(12.5, 6.5); g.quadraticCurveTo(14, 3.5, 16.5, 4); g.stroke();
+  g.fillStyle = "#FFB020"; g.beginPath(); g.arc(17, 3.6, 1.9, 0, Math.PI*2); g.fill();
+  g.fillStyle = "#22263A"; g.beginPath(); g.arc(9, 12, 6.5, 0, Math.PI*2); g.fill();
+  g.strokeStyle = "#fff"; g.lineWidth = 1; g.stroke();
+  g.fillStyle = "rgba(255,255,255,.55)"; g.beginPath(); g.arc(6.8, 9.8, 1.6, 0, Math.PI*2); g.fill();
+  g.restore();
+}
+
+function drawHeli(g, x, y, s, spin, flying) {
+  if (!flying) { g.fillStyle = "rgba(10,10,30,.25)"; g.beginPath(); g.ellipse(x, y + s*.42, s*.34, s*.08, 0, 0, Math.PI*2); g.fill(); }
+  g.lineCap = "round";
+  g.strokeStyle = "#E0A21C"; g.lineWidth = s*.1;
+  g.beginPath(); g.moveTo(x + s*.2, y - s*.02); g.lineTo(x + s*.62, y - s*.08); g.stroke();
+  g.fillStyle = "#E0A21C"; g.fillRect(x + s*.56, y - s*.24, s*.08, s*.18);
+  g.strokeStyle = "#1C2340"; g.lineWidth = s*.03;
+  const tr = s*.13 * Math.abs(Math.cos(spin * 1.7));
+  g.beginPath(); g.moveTo(x + s*.66, y - s*.08 - tr); g.lineTo(x + s*.66, y - s*.08 + tr); g.stroke();
+  g.lineWidth = s*.035;
+  g.beginPath(); g.moveTo(x - s*.3, y + s*.36); g.lineTo(x + s*.26, y + s*.36);
+  g.moveTo(x - s*.16, y + s*.2); g.lineTo(x - s*.18, y + s*.36); g.moveTo(x + s*.12, y + s*.2); g.lineTo(x + s*.14, y + s*.36); g.stroke();
+  g.fillStyle = "#FFC93C"; g.beginPath(); g.ellipse(x, y, s*.34, s*.24, 0, 0, Math.PI*2); g.fill(); g.stroke();
+  g.fillStyle = "#8FD3FF"; g.beginPath(); g.ellipse(x - s*.13, y - s*.03, s*.15, s*.12, 0, 0, Math.PI*2); g.fill();
+  g.fillStyle = "rgba(255,255,255,.7)"; g.beginPath(); g.ellipse(x - s*.17, y - s*.07, s*.05, s*.03, -.5, 0, Math.PI*2); g.fill();
+  g.beginPath(); g.moveTo(x, y - s*.24); g.lineTo(x, y - s*.33); g.stroke();
+  const L = s*.5;
+  g.strokeStyle = "#1C2340"; g.lineWidth = s*.045;
+  g.beginPath(); g.moveTo(x - L*Math.cos(spin), y - s*.33); g.lineTo(x + L*Math.cos(spin), y - s*.33); g.stroke();
+  g.globalAlpha = .45;
+  g.beginPath(); g.moveTo(x - L*Math.sin(spin), y - s*.33); g.lineTo(x + L*Math.sin(spin), y - s*.33); g.stroke();
+  g.globalAlpha = 1;
+}
+
+// ---------- board ----------
+function drawBoard() {
+  const W = S * COLS, H = S * ROWS;
+  const off = document.createElement("canvas");
+  off.width = Math.max(1, Math.round(W * dpr)); off.height = Math.max(1, Math.round(H * dpr));
+  const g = off.getContext("2d");
+  g.scale(dpr, dpr);
+  const tones = [["#F7D774","#FCF2D6"],["#F4B9A0","#FCEBE3"],["#A9D8C2","#E6F4EC"],["#B7C6F0","#E8EDFB"],["#E7C0E8","#F8EAF8"]];
+  for (let n = 1; n <= END; n++) {
+    const p = cellPt(n), x = (p.x - .5) * S, y = (p.y - .5) * S;
+    const band = tones[Math.floor((n - 1) / 20) % tones.length];
+    const r = Math.floor((n - 1) / COLS), c = Math.floor(p.x);
+    g.fillStyle = (r + c) % 2 ? band[1] : band[0];
+    g.fillRect(x, y, S, S);
+    g.strokeStyle = "rgba(28,35,64,.14)"; g.lineWidth = 1;
+    g.strokeRect(x + .5, y + .5, S - 1, S - 1);
+    g.fillStyle = "rgba(28,35,64,.72)";
+    g.font = `600 ${Math.max(8, S * 0.22)}px Figtree, system-ui, sans-serif`;
+    g.textAlign = "left"; g.textBaseline = "top";
+    g.fillText(n, x + S * .07, y + S * .06);
+  }
+  const hp = cellPt(END);
+  g.fillStyle = "#1C2340";
+  g.font = `${S * .27}px "Yatra One", Georgia, serif`;
+  g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText("Home", hp.x * S, hp.y * S + S * .14);
+
+  const badge = (list, fn, k) => list.forEach(n => {
+    const p = cellPt(n), cx = p.x*S, cy = p.y*S + S*.08;
+    g.fillStyle = "rgba(255,255,255,.75)"; g.beginPath(); g.arc(cx, cy, S*.32, 0, Math.PI*2); g.fill();
+    fn(g, cx, cy, S*k);
+  });
+  badge(SHIELDS, drawShieldIcon, .23);
+  badge(SWORDS, drawSwordIcon, .27);
+  badge(GUNS, drawGunIcon, .25);
+  badge(MINESQ, drawMineIcon, .25);
+
+  Object.entries(LADDERS).forEach(([b, t]) => drawLadder(g, cellPt(+b), cellPt(t)));
+  Object.entries(snakePaths).forEach(([h, sp]) => { if (!removed.has(+h)) drawSnake(g, sp); });
+
+  // hidden mines (shown as warning bombs)
+  mines.forEach(n => {
+    const p = cellPt(n), cx = p.x*S, cy = p.y*S + S*.06;
+    g.fillStyle = "rgba(225,29,46,.22)"; g.beginPath(); g.arc(cx, cy, S*.4, 0, Math.PI*2); g.fill();
+    g.strokeStyle = "#E11D2E"; g.lineWidth = Math.max(1.5, S*.04); g.setLineDash([S*.08, S*.06]); g.stroke(); g.setLineDash([]);
+    drawMineIcon(g, cx, cy, S*.3);
+  });
+  boardImg = off;
+}
+
+function drawLadder(g, B, T) {
+  const bx = B.x*S, by = B.y*S, tx = T.x*S, ty = T.y*S;
+  const dx = tx - bx, dy = ty - by, L = Math.hypot(dx, dy);
+  const ux = dx / L, uy = dy / L, px = -uy, py = ux, hw = S * 0.17;
+  const ext = S * 0.18;
+  const sx = bx - ux*ext, sy = by - uy*ext, ex = tx + ux*ext, ey = ty + uy*ext;
+  g.lineCap = "round";
+  g.strokeStyle = "rgba(20,20,40,.22)"; g.lineWidth = S * .1;
+  [-1, 1].forEach(s => { g.beginPath(); g.moveTo(sx + px*hw*s + 3, sy + py*hw*s + 4); g.lineTo(ex + px*hw*s + 3, ey + py*hw*s + 4); g.stroke(); });
+  g.strokeStyle = "#B07A3C"; g.lineWidth = S * .065;
+  const steps = Math.max(2, Math.floor((L + ext*2) / (S * .32)));
+  for (let i = 1; i < steps; i++) {
+    const t = i / steps, cx = sx + (ex - sx)*t, cy = sy + (ey - sy)*t;
+    g.beginPath(); g.moveTo(cx - px*hw, cy - py*hw); g.lineTo(cx + px*hw, cy + py*hw); g.stroke();
+  }
+  [-1, 1].forEach(s => {
+    g.strokeStyle = "#7A4E22"; g.lineWidth = S * .095;
+    g.beginPath(); g.moveTo(sx + px*hw*s, sy + py*hw*s); g.lineTo(ex + px*hw*s, ey + py*hw*s); g.stroke();
+    g.strokeStyle = "rgba(255,220,160,.45)"; g.lineWidth = S * .025;
+    g.beginPath(); g.moveTo(sx + px*hw*s - px*2, sy + py*hw*s - py*2); g.lineTo(ex + px*hw*s - px*2, ey + py*hw*s - py*2); g.stroke();
+  });
+}
+
+function drawSnake(g, sp) {
+  const N = 80, pts = [];
+  for (let i = 0; i <= N; i++) { const p = bez(sp.H, sp.c1, sp.c2, sp.T, i / N); pts.push({x: p.x*S, y: p.y*S}); }
+  const w0 = S * .3;
+  g.lineCap = "round";
+  for (let i = 0; i < N; i++) {
+    g.strokeStyle = "rgba(20,20,40,.2)"; g.lineWidth = w0 * (1 - .75 * i / N);
+    g.beginPath(); g.moveTo(pts[i].x + 3, pts[i].y + 4); g.lineTo(pts[i+1].x + 3, pts[i+1].y + 4); g.stroke();
+  }
+  for (let i = 0; i < N; i++) {
+    g.strokeStyle = sp.color[0]; g.lineWidth = w0 * (1 - .75 * i / N);
+    g.beginPath(); g.moveTo(pts[i].x, pts[i].y); g.lineTo(pts[i+1].x, pts[i+1].y); g.stroke();
+  }
+  for (let i = 4; i < N - 2; i += 5) {
+    const w = w0 * (1 - .75 * i / N);
+    g.fillStyle = sp.color[1];
+    g.beginPath(); g.arc(pts[i].x, pts[i].y, w * .28, 0, Math.PI*2); g.fill();
+  }
+  const h = pts[0], nx = pts[3].x - h.x, ny = pts[3].y - h.y, nl = Math.hypot(nx, ny) || 1;
+  const fx = -nx / nl, fy = -ny / nl, qx = -fy, qy = fx;
+  g.strokeStyle = "#D61F3A"; g.lineWidth = S * .03;
+  const tb = {x: h.x + fx*w0*.55, y: h.y + fy*w0*.55}, tt = {x: tb.x + fx*S*.14, y: tb.y + fy*S*.14};
+  g.beginPath(); g.moveTo(tb.x, tb.y); g.lineTo(tt.x, tt.y);
+  g.lineTo(tt.x + fx*S*.05 + qx*S*.04, tt.y + fy*S*.05 + qy*S*.04);
+  g.moveTo(tt.x, tt.y); g.lineTo(tt.x + fx*S*.05 - qx*S*.04, tt.y + fy*S*.05 - qy*S*.04); g.stroke();
+  g.fillStyle = sp.color[0];
+  g.beginPath(); g.ellipse(h.x, h.y, w0*.62, w0*.5, Math.atan2(fy, fx), 0, Math.PI*2); g.fill();
+  [-1, 1].forEach(s => {
+    const ex = h.x + fx*w0*.18 + qx*w0*.24*s, ey = h.y + fy*w0*.18 + qy*w0*.24*s;
+    g.fillStyle = "#fff"; g.beginPath(); g.arc(ex, ey, w0*.13, 0, Math.PI*2); g.fill();
+    g.fillStyle = "#111"; g.beginPath(); g.arc(ex + fx*w0*.04, ey + fy*w0*.04, w0*.065, 0, Math.PI*2); g.fill();
+  });
+}
+
+function render() {
+  const W = S * COLS, H = S * ROWS;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  if (boardImg) ctx.drawImage(boardImg, 0, 0, W, H);
+
+  if (fading) {
+    const sp = snakePaths[fading.head], t = fading.t;
+    ctx.save(); ctx.globalAlpha = t < .35 ? 1 : Math.max(0, 1 - (t - .35) / .65);
+    drawSnake(ctx, sp); ctx.restore();
+    const k = Math.min(1, t / .3);
+    ctx.save(); ctx.globalAlpha = 1 - Math.max(0, (t - .5) * 2);
+    if (fading.style === "burst") {
+      const hx = sp.H.x*S, hy = sp.H.y*S;
+      ctx.lineCap = "round";
+      for (let i = 0; i < 10; i++) {
+        const a = i / 10 * Math.PI * 2, r1 = S * .15 * k, r2 = S * (.35 + .4 * k);
+        ctx.strokeStyle = i % 2 ? "#F2A33A" : "#FFD84D"; ctx.lineWidth = S * .08;
+        ctx.beginPath(); ctx.moveTo(hx + Math.cos(a)*r1, hy + Math.sin(a)*r1); ctx.lineTo(hx + Math.cos(a)*r2, hy + Math.sin(a)*r2); ctx.stroke();
+      }
+      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(hx, hy, S * .2 * k, 0, Math.PI*2); ctx.fill();
+    } else {
+      const m = bez(sp.H, sp.c1, sp.c2, sp.T, .5);
+      ctx.strokeStyle = "#fff"; ctx.lineCap = "round"; ctx.lineWidth = S * .1;
+      ctx.beginPath(); ctx.moveTo(m.x*S - S*.7, m.y*S - S*.7); ctx.lineTo(m.x*S - S*.7 + S*1.4*k, m.y*S - S*.7 + S*1.4*k); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  if (aiming === "gun") {
+    const pulse = (Math.sin(performance.now() / 180) + 1) / 2;
+    liveSnakes().forEach(h => {
+      const P = snakePaths[h].H, x = P.x*S, y = P.y*S, r = S * (.42 + pulse * .1);
+      ctx.strokeStyle = "#E11D2E"; ctx.lineWidth = Math.max(2, S * .05);
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - r*1.3, y); ctx.lineTo(x - r*.5, y); ctx.moveTo(x + r*.5, y); ctx.lineTo(x + r*1.3, y);
+      ctx.moveTo(x, y - r*1.3); ctx.lineTo(x, y - r*.5); ctx.moveTo(x, y + r*.5); ctx.lineTo(x, y + r*1.3); ctx.stroke();
+    });
+  } else if (aiming === "mine" && hoverCell != null) {
+    const p = cellPt(hoverCell), ok = validMine(hoverCell);
+    ctx.strokeStyle = ok ? "#1E9A5A" : "#E11D2E"; ctx.lineWidth = Math.max(3, S * .07);
+    ctx.strokeRect((p.x - .5)*S + 2, (p.y - .5)*S + 2, S - 4, S - 4);
+    if (ok) { ctx.globalAlpha = .6; drawMineIcon(ctx, p.x*S, p.y*S + S*.06, S*.3); ctx.globalAlpha = 1; }
+  }
+
+  if (blast) {
+    const p = cellPt(blast.n), x = p.x*S, y = p.y*S, t = blast.t;
+    ctx.save(); ctx.globalAlpha = 1 - Math.max(0, (t - .55) / .45);
+    ctx.fillStyle = "#F2694F"; ctx.beginPath(); ctx.arc(x, y, S * (.3 + 1.4 * t), 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#FFD84D"; ctx.beginPath(); ctx.arc(x, y, S * (.2 + .9 * t), 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "#FFF3C4"; ctx.lineWidth = S * .08; ctx.lineCap = "round";
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2 + .2; ctx.beginPath(); ctx.moveTo(x + Math.cos(a)*S*(.4 + t), y + Math.sin(a)*S*(.4 + t)); ctx.lineTo(x + Math.cos(a)*S*(.7 + 1.6*t), y + Math.sin(a)*S*(.7 + 1.6*t)); ctx.stroke(); }
+    const fs = S * .6 * (.5 + Math.min(1, t * 4) * .6);
+    ctx.font = `${fs}px "Yatra One", Georgia, serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.lineWidth = fs * .14; ctx.strokeStyle = "#1C2340"; ctx.strokeText("BOOM!", x, y - S * .2);
+    ctx.fillStyle = "#fff"; ctx.fillText("BOOM!", x, y - S * .2);
+    ctx.restore();
+  }
+
+  if (heli) {
+    const pp = cellPt(heli.pos), px = pp.x*S, py = pp.y*S;
+    g2pad(px, py);
+  }
+
+  const groups = {};
+  players.forEach((p, i) => {
+    if (p.vx == null) return;
+    const k = Math.round(p.vx*4) + ":" + Math.round(p.vy*4);
+    (groups[k] = groups[k] || []).push(i);
+  });
+  const order = players.map((_, i) => i).sort((a, b) => (a === turn) - (b === turn));
+  order.forEach(i => {
+    const p = players[i];
+    if (p.vx == null) return;
+    const k = Math.round(p.vx*4) + ":" + Math.round(p.vy*4), grp = groups[k];
+    let ox = 0, oy = 0;
+    const crowd = grp.length > 1 && !p.moving;
+    if (crowd) {
+      const j = grp.indexOf(i), ang = (j / grp.length) * Math.PI * 2 - Math.PI / 4;
+      ox = Math.cos(ang) * S * .2; oy = Math.sin(ang) * S * .2;
+    }
+    const x = p.vx*S + ox, y = p.vy*S + oy - (p.lift || 0)*S, r = S * (crowd ? .18 : .24);
+    ctx.fillStyle = "rgba(10,10,30,.3)";
+    ctx.beginPath(); ctx.ellipse(p.vx*S + ox + 2, p.vy*S + oy + r*.7, r*.9, r*.35, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+    ctx.lineWidth = Math.max(2, r * .2); ctx.strokeStyle = "#fff"; ctx.stroke();
+    if (i === turn && winner == null) { ctx.lineWidth = 2; ctx.strokeStyle = "#1C2340"; ctx.beginPath(); ctx.arc(x, y, r + 2 + r*.2, 0, Math.PI*2); ctx.stroke(); }
+    ctx.fillStyle = "#fff";
+    ctx.font = `700 ${r * 1.05}px Figtree, system-ui, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText((p.name.trim()[0] || "?").toUpperCase(), x, y + r*.04);
+    if (p.shield) drawShieldIcon(ctx, x + r*.95, y - r*.85, r*.42);
+    if (p.sword) drawSwordIcon(ctx, x - r*.95, y - r*.85, r*.5);
+    if (p.gun) drawGunIcon(ctx, x + r*.95, y + r*.75, r*.5);
+    if (p.mine) drawMineIcon(ctx, x - r*.95, y + r*.75, r*.5);
+    if (p.bubble) { ctx.strokeStyle = `rgba(47,127,216,${1 - p.bubble})`; ctx.lineWidth = Math.max(3, S*.06); ctx.beginPath(); ctx.arc(x, y, r * (1.2 + p.bubble * 1.4), 0, Math.PI*2); ctx.stroke(); }
+  });
+
+  if (heli || heliAt) {
+    const spin = performance.now() / 45;
+    const pos = heliAt || {x: cellPt(heli.pos).x, y: cellPt(heli.pos).y - .08};
+    drawHeli(ctx, pos.x*S, pos.y*S, S * 1.05, spin, !!heliAt);
+    if (heli && !heliAt) {
+      const bx = pos.x*S + S*.38, by = pos.y*S - S*.42, br = S*.15;
+      ctx.fillStyle = "#fff"; ctx.strokeStyle = "#1C2340"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#1C2340"; ctx.font = `700 ${br*1.3}px Figtree, system-ui, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(heli.left, bx, by + br*.05);
+    }
+  }
+
+  if (shot) {
+    ctx.fillStyle = "#FFD84D"; ctx.strokeStyle = "#F2A33A"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(shot.x*S, shot.y*S, S*.11, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  }
+}
+
+function g2pad(x, y) {
+  ctx.fillStyle = "#2D3550"; ctx.beginPath(); ctx.arc(x, y, S*.4, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#fff"; ctx.lineWidth = Math.max(1.5, S*.035); ctx.setLineDash([S*.07, S*.05]);
+  ctx.beginPath(); ctx.arc(x, y, S*.33, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = "rgba(255,255,255,.85)"; ctx.font = `700 ${S*.34}px Figtree, system-ui, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText("H", x, y + S*.02);
+}
+
+// ---------- layout ----------
+function layout() {
+  if (!Object.keys(snakePaths).length) {
+    buildPaths();
+    players.forEach(p => { if (p.pos) { const c = cellPt(p.pos); p.vx = c.x; p.vy = c.y; } });
+  }
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width) return;
+  dpr = window.devicePixelRatio || 1;
+  S = rect.width / COLS;
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(S * ROWS * dpr);
+  drawBoard(); render();
+}
+new ResizeObserver(() => layout()).observe(boardBox.parentElement);
+if (document.fonts) document.fonts.ready.then(() => layout());
+
+// ---------- animation ----------
+function animate(dur, frame) {
+  dur = reduced ? Math.min(dur, 60) : dur;
+  return new Promise(res => {
+    const t0 = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - t0) / dur);
+      frame(t); render();
+      if (t < 1) requestAnimationFrame(step); else res();
+    }
+    requestAnimationFrame(step);
+  });
+}
+const wait = ms => new Promise(r => setTimeout(r, reduced ? 0 : ms));
+const ease = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
+
+async function hop(p, n) {
+  sfx.hop((n - 1) % 10);
+  const a = {x: p.vx ?? cellPt(0).x, y: p.vy ?? cellPt(0).y}, b = cellPt(n);
+  p.moving = true;
+  await animate(170, t => { const e = ease(t); p.vx = a.x + (b.x - a.x)*e; p.vy = a.y + (b.y - a.y)*e; p.lift = Math.sin(Math.PI*t) * .28; });
+  p.lift = 0; p.moving = false;
+}
+async function glide(p, to, dur, arc = 0) {
+  const a = {x: p.vx, y: p.vy}, b = cellPt(to);
+  p.moving = true;
+  await animate(dur, t => { const e = ease(t); p.vx = a.x + (b.x - a.x)*e; p.vy = a.y + (b.y - a.y)*e; p.lift = Math.sin(Math.PI*t) * arc; });
+  p.lift = 0; p.moving = false;
+}
+async function climb(p, to) {
+  sfx.ladder();
+  const b = cellPt(to);
+  await glide(p, to, 260 + Math.hypot(b.x - p.vx, b.y - p.vy) * 110);
+}
+async function slither(p, head) {
+  sfx.snake();
+  const sp = snakePaths[head];
+  const d = Math.hypot(sp.T.x - sp.H.x, sp.T.y - sp.H.y);
+  p.moving = true;
+  await animate(400 + d * 120, t => { const q = bez(sp.H, sp.c1, sp.c2, sp.T, ease(t)); p.vx = q.x; p.vy = q.y; });
+  p.moving = false;
+}
+async function chop(head, style = "slash") {
+  if (style === "slash") sfx.sword();
+  removed.add(head); drawBoard();
+  fading = {head, t: 0, style};
+  await animate(900, t => { fading.t = t; });
+  fading = null; render();
+}
+async function shoot(p, head) {
+  sfx.shoot();
+  const a = p.vx != null ? {x: p.vx, y: p.vy} : cellPt(1), b = snakePaths[head].H;
+  await animate(320, t => { shot = {x: a.x + (b.x - a.x)*t, y: a.y + (b.y - a.y)*t}; });
+  shot = null;
+  await chop(head, "burst");
+}
+function heliLoop() {
+  if (!heli && !heliAt) { heliLooping = false; render(); return; }
+  heliLooping = true; render(); requestAnimationFrame(heliLoop);
+}
+async function heliArrive() {
+  const taken = new Set(players.map(p => p.pos));
+  const spots = [];
+  for (let i = 3; i <= 77; i++) if (!SPECIAL.has(i) && !POWER.has(i) && !mines.has(i) && !taken.has(i)) spots.push(i);
+  const pos = spots[Math.floor(Math.random() * spots.length)];
+  heli = {pos, left: HELI_TURNS};
+  const b = {x: cellPt(pos).x, y: cellPt(pos).y - .08}, a = {x: 11.5, y: -1.5};
+  sfx.heli();
+  heliAt = {...a};
+  if (!heliLooping) heliLoop();
+  await animate(1300, t => { const e = ease(t); heliAt = {x: a.x + (b.x - a.x)*e, y: a.y + (b.y - a.y)*e}; });
+  heliAt = null;
+  toast(`A helicopter landed on ${pos}!`, "heli");
+  addLog(turn, `spotted a helicopter landing on ${pos}`, "");
+}
+async function heliLeave() {
+  const a = heliAt || {x: cellPt(heli.pos).x, y: cellPt(heli.pos).y - .08}, b = {x: a.x + 3, y: -2};
+  heli = null; heliAt = {...a};
+  sfx.heli();
+  await animate(900, t => { const e = t*t; heliAt = {x: a.x + (b.x - a.x)*e, y: a.y + (b.y - a.y)*e}; });
+  heliAt = null; heliCool = 2 + Math.floor(Math.random() * 3);
+  render();
+}
+async function heliRide(p, id, info) {
+  const from = p.pos, dest = Math.min(END - 1, p.pos + 20), pad = heli.pos;
+  toast(`${p.name} caught the helicopter!`, "heli");
+  await glide(p, pad, 350, .3); if (id !== gameId) return false;
+  sfx.heli(); sfx.fly();
+  const a = cellPt(pad), b = cellPt(dest);
+  p.moving = true;
+  await animate(1500, t => {
+    const e = ease(t), x = a.x + (b.x - a.x)*e, y = a.y + (b.y - a.y)*e - Math.sin(Math.PI*t) * .9;
+    heliAt = {x, y: y - .5}; p.vx = x; p.vy = y; p.lift = 0;
+  });
+  p.moving = false; p.pos = dest;
+  if (id !== gameId) return false;
+  info.text += `, helicopter flew ${from} → ${dest}`; info.kind = "up";
+  toast(`${p.name} flew up to ${dest}!`, "heli");
+  await heliLeave();
+  return id === gameId;
+}
+async function tickHeli() {
+  if (heli) {
+    heli.left--;
+    if (heli.left <= 0) { toast("The helicopter flew away!", "heli"); await heliLeave(); }
+    else render();
+  } else if (--heliCool <= 0) {
+    await heliArrive();
+  }
+}
+
+async function block(p) {
+  sfx.shield();
+  await animate(800, t => { p.bubble = t; });
+  p.bubble = 0;
+}
+async function explode(p, n) {
+  sfx.boom();
+  mines.delete(n); drawBoard();
+  await animate(700, t => { blast = {n, t}; });
+  blast = null;
+  const spots = [];
+  for (let i = 2; i < END; i++) if (!SPECIAL.has(i) && !mines.has(i) && i !== n) spots.push(i);
+  const dest = spots[Math.floor(Math.random() * spots.length)];
+  sfx.fly();
+  await glide(p, dest, 1000, 2.5);
+  p.pos = dest;
+  return dest;
+}
+
+// ---------- sound (synthesized, no files) ----------
+let actx = null, muted = false;
+try { muted = localStorage.getItem("sl-muted") === "1"; } catch (e) {}
+function ac() {
+  if (muted) return null;
+  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+  if (actx.state === "suspended") actx.resume();
+  return actx;
+}
+function tone(f, dur, type = "sine", vol = .2, f2 = null, delay = 0) {
+  const a = ac(); if (!a) return;
+  const t = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + .05);
+}
+function noise(dur, vol = .15, freq = 2000, type = "bandpass", delay = 0) {
+  const a = ac(); if (!a) return;
+  const t = a.currentTime + delay, len = Math.floor(a.sampleRate * dur);
+  const buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  src.buffer = buf; f.type = type; f.frequency.value = freq;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f).connect(g).connect(a.destination); src.start(t);
+}
+const sfx = {
+  roll() { for (let i = 0; i < 6; i++) noise(.04, .25, 1200 + Math.random() * 1500, "bandpass", i * .065); },
+  hop(i) { tone(380 + i * 30, .12, "sine", .22, 640 + i * 30); },
+  ladder() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, .16, "triangle", .16, null, i * .09)); tone(300, .6, "sine", .08, 1200); },
+  snake() { noise(.55, .12, 4500, "highpass"); tone(700, .9, "sawtooth", .05, 110, .2); tone(500, .5, "sine", .14, 160, .25); },
+  pickup() { [784, 988, 1319].forEach((f, i) => tone(f, .18, "sine", .18, null, i * .08)); },
+  sword() { noise(.25, .3, 3000, "highpass"); tone(1760, .35, "square", .06, 1500, .12); tone(2640, .3, "sine", .08, null, .12); },
+  shoot() { tone(1500, .22, "square", .08, 160); noise(.18, .35, 700, "lowpass", .3); },
+  shield() { tone(180, .25, "triangle", .3, 120); tone(360, .3, "sine", .12, null, .05); },
+  place() { tone(260, .1, "square", .07); tone(180, .14, "square", .07, null, .1); },
+  boom() { noise(1.0, .7, 500, "lowpass"); tone(140, .8, "sine", .45, 35); },
+  fly() { noise(.9, .12, 1400, "bandpass"); tone(300, .9, "sine", .1, 900); },
+  heli() { for (let i = 0; i < 12; i++) noise(.05, .28, 260, "lowpass", i * .085); },
+  win() { [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, i === 5 ? .6 : .2, "triangle", .2, null, i * .14)); },
+};
+function setSound() {
+  const b = $("soundBtn");
+  b.textContent = muted ? "Sound off" : "Sound on";
+  b.setAttribute("aria-pressed", !muted);
+}
+
+// ---------- dice ----------
+const PIPS = {1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+const die = $("die");
+for (let i = 0; i < 9; i++) { const d = document.createElement("span"); d.className = "pip"; die.appendChild(d); }
+function showFace(v) { [...die.children].forEach((c, i) => c.classList.toggle("on", PIPS[v].includes(i))); }
+function rollDice() {
+  const v = 1 + Math.floor(Math.random() * 6);
+  return new Promise(res => {
+    sfx.roll();
+    if (reduced) { showFace(v); return res(v); }
+    let k = 0;
+    die.classList.add("shake");
+    const iv = setInterval(() => {
+      showFace(1 + Math.floor(Math.random() * 6));
+      die.classList.toggle("shake");
+      if (++k >= 8) { clearInterval(iv); die.classList.remove("shake"); showFace(v); res(v); }
+    }, 60);
+  });
+}
+
+// ---------- overlays ----------
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function toast(msg, kind) {
+  const el = $("toast");
+  el.innerHTML = (ICONS[kind] || "") + `<span>${esc(msg)}</span>`;
+  el.hidden = true; void el.offsetWidth; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2000);
+}
+function ask(text, opts) {
+  return new Promise(res => {
+    $("choiceText").textContent = text;
+    const box = $("choiceBtns"); box.innerHTML = "";
+    opts.forEach((o, i) => {
+      const b = document.createElement("button"); b.type = "button";
+      if (i === 0) b.className = "primary";
+      b.innerHTML = (o.icon ? ICONS[o.icon] : "") + `<span>${esc(o.label)}</span>`;
+      b.addEventListener("click", () => { $("choice").hidden = true; res(o.value); });
+      box.appendChild(b);
+    });
+    $("choice").hidden = false;
+    box.firstChild && box.firstChild.focus({preventScroll: true});
+  });
+}
+
+// ---------- aiming (gun / mine) ----------
+function aimLoop() { render(); if (aiming) requestAnimationFrame(aimLoop); }
+function startAim(kind) {
+  const p = players[turn];
+  if (busy || aiming || winner != null || !p[kind]) return;
+  if (kind === "gun" && !liveSnakes().length) return;
+  ac(); aiming = kind; hoverCell = null; canvas.classList.add("aiming");
+  updateUI(); aimLoop();
+  const msg = kind === "gun" ? `${p.name}, tap a snake to shoot it!` : `${p.name}, tap an empty square to hide your mine.`;
+  ask(msg, [{label: "Cancel", value: "cancel"}]).then(() => { if (aiming === kind) stopAim(); });
+}
+function stopAim() { aiming = false; hoverCell = null; canvas.classList.remove("aiming"); $("choice").hidden = true; updateUI(); render(); }
+function boardXY(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {x: (e.clientX - rect.left) / rect.width * COLS, y: (e.clientY - rect.top) / rect.height * ROWS};
+}
+canvas.addEventListener("pointermove", e => { if (aiming === "mine") { const q = boardXY(e); hoverCell = cellAt(q.x, q.y); } });
+canvas.addEventListener("click", async e => {
+  if (!aiming) return;
+  const {x, y} = boardXY(e), p = players[turn], id = gameId;
+  if (aiming === "gun") {
+    let best = null, bd = 0.75;
+    liveSnakes().forEach(h => { const sp = snakePaths[h]; for (let i = 0; i <= 30; i++) { const q = bez(sp.H, sp.c1, sp.c2, sp.T, i / 30), d = Math.hypot(q.x - x, q.y - y); if (d < bd) { bd = d; best = h; } } });
+    if (best == null) return;
+    stopAim(); busy = true; p.gun = false; updateUI();
+    toast(`${p.name} shot the snake on ${best}!`, "gun");
+    await shoot(p, best); if (id !== gameId) return;
+    addLog(turn, `shot the snake on ${best}`, "up");
+  } else {
+    const n = cellAt(x, y);
+    if (!validMine(n)) { hoverCell = n; toast("Pick an empty square", "mine"); return; }
+    stopAim(); p.mine = false; placeMine(n);
+    toast(`${p.name} hid a mine on ${n}!`, "mine");
+    addLog(turn, `hid a mine on ${n}`, "");
+  }
+  busy = false; updateUI(); render();
+});
+function placeMine(n) { mines.add(n); sfx.place(); drawBoard(); render(); }
+
+// ---------- game flow ----------
+function addLog(i, text, kind) {
+  log.unshift({i, text, kind});
+  if (log.length > 60) log.pop();
+}
+
+async function cpuPowers(cp, id) {
+  if (cp.gun) {
+    const tgt = liveSnakes().filter(h => h > cp.pos).sort((a, b) => a - b)[0];
+    if (tgt) {
+      cp.gun = false; toast(`${cp.name} shot the snake on ${tgt}!`, "gun");
+      await shoot(cp, tgt); if (id !== gameId) return false;
+      addLog(turn, `shot the snake on ${tgt}`, "up"); updateUI();
+      await wait(350);
+    }
+  }
+  if (cp.mine) {
+    const others = players.filter(o => o !== cp).sort((a, b) => b.pos - a.pos);
+    const leader = others[0];
+    for (const d of [3, 4, 2, 5, 1, 6]) {
+      const n = leader.pos + d;
+      if (validMine(n)) {
+        cp.mine = false; placeMine(n);
+        toast(`${cp.name} hid a mine on ${n}!`, "mine");
+        addLog(turn, `hid a mine on ${n}`, ""); updateUI();
+        await wait(500);
+        break;
+      }
+    }
+  }
+  return id === gameId;
+}
+
+async function resolveLanding(p, id, info) {
+  const sq = p.pos;
+  if (LADDERS[sq]) {
+    await wait(120);
+    await climb(p, LADDERS[sq]); if (id !== gameId) return false;
+    p.pos = LADDERS[sq]; info.text += `, ladder up to ${p.pos}`; info.kind = "up";
+  } else if (SNAKES[sq] && !removed.has(sq)) {
+    await wait(120);
+    const opts = [];
+    if (p.sword) opts.push({label: "Chop it", value: "sword", icon: "sword"});
+    if (p.gun) opts.push({label: "Shoot it", value: "gun", icon: "gun"});
+    if (p.shield) opts.push({label: "Block it", value: "shield", icon: "shield"});
+    let pick = "slide";
+    if (opts.length) {
+      if (p.type === "cpu") pick = opts[0].value;
+      else { opts.push({label: "Save it, slide down", value: "slide"}); pick = await ask(`Uh-oh, ${p.name}! A snake! Use a power-up?`, opts); }
+    }
+    if (id !== gameId) return false;
+    if (pick === "sword") {
+      p.sword = false; toast(`${p.name} chopped the snake!`, "sword");
+      await chop(sq); info.text += ", sword chopped the snake!"; info.kind = "up";
+    } else if (pick === "gun") {
+      p.gun = false; toast(`${p.name} shot the snake!`, "gun");
+      await shoot(p, sq); info.text += ", shot the snake!"; info.kind = "up";
+    } else if (pick === "shield") {
+      p.shield = false; toast(`${p.name}'s shield blocked the snake!`, "shield");
+      await block(p); info.text += ", shield blocked the snake!"; info.kind = "up";
+    } else {
+      await slither(p, sq);
+      p.pos = SNAKES[sq]; info.text += `, snake down to ${p.pos}`; info.kind = "down";
+    }
+  }
+  return id === gameId;
+}
+
+async function takeTurn() {
+  if (busy || aiming || winner != null) return;
+  const id = gameId;
+  busy = true; updateUI();
+  const p = players[turn];
+  if (p.type === "cpu" && !(await cpuPowers(p, id))) return;
+  const v = await rollDice();
+  if (id !== gameId) return;
+  lastRoll = v;
+  const start = p.pos, target = start + v;
+  const info = {text: `rolled ${v}`, kind: ""};
+  if (target > END) {
+    info.text += `, needs exactly ${END - start}`;
+  } else {
+    let boomAt = null;
+    for (let n = start + 1; n <= target; n++) {
+      await hop(p, n); if (id !== gameId) return;
+      p.pos = n;
+      if (mines.has(n)) { boomAt = n; break; }
+    }
+    if (boomAt != null) {
+      toast(`BOOM! ${p.name} stepped on a mine!`, "mine");
+      await wait(150);
+      const dest = await explode(p, boomAt); if (id !== gameId) return;
+      info.text += `: stepped on the mine at ${boomAt}! Blasted to ${dest}`;
+      info.kind = dest > boomAt ? "up" : "down";
+      toast(dest > boomAt ? `${p.name} flew ahead to ${dest}!` : `${p.name} flew back to ${dest}!`, "mine");
+    } else {
+      info.text += `: ${start || "start"} → ${target}`;
+      if (!(await resolveLanding(p, id, info))) return;
+    }
+    if (heli && !heliAt && Math.abs(p.pos - heli.pos) <= 1) {
+      await wait(200);
+      if (!(await heliRide(p, id, info))) return;
+      if (!(await resolveLanding(p, id, info))) return;
+    }
+    for (const [list, key] of [[SHIELDS, "shield"], [SWORDS, "sword"], [GUNS, "gun"], [MINESQ, "mine"]]) {
+      if (list.includes(p.pos) && !p[key]) {
+        p[key] = true; sfx.pickup(); info.text += `, picked up a ${key}`; info.kind = info.kind || "up";
+        toast(`${p.name} got a ${key}!`, key);
+        break;
+      }
+    }
+  }
+  if (p.pos === END) {
+    winner = turn; sfx.win(); info.text += ". Wins!"; info.kind = "up";
+  } else if (v === 6) {
+    info.text += ". Rolls again";
+  } else {
+    turn = (turn + 1) % players.length;
+  }
+  addLog(players.indexOf(p), info.text, info.kind);
+  updateUI(); render();
+  if (winner == null) { await wait(250); await tickHeli(); if (id !== gameId) return; }
+  busy = false;
+  updateUI(); render();
+  scheduleAI();
+}
+
+function scheduleAI() {
+  clearTimeout(aiTimer);
+  if (winner == null && players[turn] && players[turn].type === "cpu") aiTimer = setTimeout(takeTurn, reduced ? 300 : 700);
+}
+
+function newGame() {
+  gameId++; clearTimeout(aiTimer); busy = false; winner = null; turn = 0; log = [];
+  removed = new Set(); mines = new Set(); fading = null; shot = null; blast = null; heli = null; heliAt = null; heliCool = 3;
+  aiming = false; canvas.classList.remove("aiming"); $("toast").hidden = true; $("choice").hidden = true;
+  players = setup.slice(0, count).map((s, i) => ({name: s.name.trim() || `Player ${i+1}`, type: s.type, color: COLORS[i], pos: 0, vx: null, vy: null, shield: false, sword: false, gun: false, mine: false}));
+  showFace(1);
+  drawBoard(); updateUI(); render(); scheduleAI();
+}
+
+// ---------- UI ----------
+function updateUI() {
+  $("players").innerHTML = players.map((p, i) => `
+    <li class="${i === turn && winner == null ? "active" : ""}">
+      <span class="dot" style="background:${p.color}"></span>
+      <span class="pname">${esc(p.name)}<small>${p.type === "cpu" ? "computer" : ""}</small>${p.shield ? ICONS.shield : ""}${p.sword ? ICONS.sword : ""}${p.gun ? ICONS.gun : ""}${p.mine ? ICONS.mine : ""}</span>
+      <span class="pos">${p.pos ? `square <b>${p.pos}</b>` : "not started"}</span>
+    </li>`).join("");
+  $("log").innerHTML = log.length ? log.map(l => {
+    const p = players[l.i];
+    return `<li><span class="d" style="background:${p.color}"></span><span><span class="tag">${esc(p.name)}</span> <span class="${l.kind}">${esc(l.text)}</span></span></li>`;
+  }).join("") : `<li class="empty">No moves yet. Roll to start.</li>`;
+  const cur = players[turn];
+  const rb = $("rollBtn");
+  if (winner != null) {
+    rb.disabled = true; rb.textContent = "Game over";
+    $("shootBtn").hidden = true; $("mineBtn").hidden = true;
+    $("status").textContent = `${players[winner].name} wins`;
+    $("winText").textContent = `${players[winner].name} reached ${END}!`;
+    $("winner").hidden = false;
+  } else {
+    $("winner").hidden = true;
+    const cpu = cur.type === "cpu", free = !cpu && !busy && !aiming;
+    rb.disabled = busy || cpu || !!aiming;
+    rb.textContent = cpu ? `${cur.name} is rolling…` : (busy ? "Moving…" : `Roll for ${cur.name}`);
+    $("shootBtn").hidden = !(free && cur.gun && liveSnakes().length);
+    $("mineBtn").hidden = !(free && cur.mine);
+    $("status").textContent = busy || cpu ? "" : (aiming ? "Choose on the board" : "Your move");
+  }
+}
+
+function renderSetup() {
+  [...$("countSeg").children].forEach(b => b.setAttribute("aria-pressed", +b.dataset.n === count));
+  $("setupRows").innerHTML = setup.slice(0, count).map((s, i) => `
+    <div class="prow">
+      <span class="dot" style="background:${COLORS[i]};width:14px;height:14px"></span>
+      <input id="pname${i}" value="${esc(s.name)}" maxlength="16" aria-label="Player ${i+1} name">
+      <select id="ptype${i}" aria-label="Player ${i+1} type">
+        <option value="human" ${s.type === "human" ? "selected" : ""}>Human</option>
+        <option value="cpu" ${s.type === "cpu" ? "selected" : ""}>Computer</option>
+      </select>
+    </div>`).join("");
+  setup.slice(0, count).forEach((s, i) => {
+    $("pname" + i).addEventListener("input", e => { s.name = e.target.value; });
+    $("ptype" + i).addEventListener("change", e => { s.type = e.target.value; });
+  });
+}
+$("countSeg").addEventListener("click", e => { const n = e.target.dataset && +e.target.dataset.n; if (n) { count = n; renderSetup(); } });
+$("newBtn").addEventListener("click", () => { newGame(); $("setupBox").open = false; });
+$("againBtn").addEventListener("click", () => { ac(); newGame(); });
+$("rollBtn").addEventListener("click", () => { ac(); takeTurn(); });
+$("shootBtn").addEventListener("click", () => startAim("gun"));
+$("mineBtn").addEventListener("click", () => startAim("mine"));
+$("soundBtn").addEventListener("click", () => {
+  muted = !muted; try { localStorage.setItem("sl-muted", muted ? "1" : "0"); } catch (e) {}
+  setSound(); if (!muted) sfx.pickup();
+});
+setSound();
+document.addEventListener("keydown", e => {
+  if ((e.code === "Space" || e.key === " ") && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName)) {
+    e.preventDefault();
+    if (players[turn] && players[turn].type === "human" && !aiming) takeTurn();
+  }
+});
+
+// ---------- boot (keeps an in-progress game across page updates) ----------
+function start(data) {
+  layout();
+  if (data && data.v === 8 && data.players && data.players.length) {
+    setup = data.setup || setup; count = data.count || count;
+    removed = new Set(data.removed || []); mines = new Set(data.mines || []); heli = data.heli || null; heliCool = data.heliCool ?? 3; heliAt = null; if (heli) heliLoop();
+    players = data.players.map(p => { const c = cellPt(p.pos); return {...p, vx: p.pos ? c.x : null, vy: p.pos ? c.y : null, moving: false, lift: 0}; });
+    turn = data.turn || 0; winner = data.winner ?? null; log = data.log || [];
+    lastRoll = data.lastRoll || 1; showFace(lastRoll);
+    renderSetup(); drawBoard(); updateUI(); render(); scheduleAI();
+  } else {
+    renderSetup(); newGame();
+  }
+}
+window.claude?.hot?.snapshot?.(() => ({v: 8, setup, count, removed: [...removed], mines: [...mines], heli: heli && {pos: heli.pos, left: heli.left}, heliCool, players: players.map(({name, type, color, pos, shield, sword, gun, mine}) => ({name, type, color, pos, shield, sword, gun, mine})), turn, winner, log, lastRoll}));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
+</body>
+</html>

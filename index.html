@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Family Games</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800&display=swap">
+<style>
+  :root { --bg: #143024; --card: #21483A; --fg: #F6F0D8; --muted: #B9C9AE; --leaf: #8ED16B; --lava: #FF8A2A; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg); font-family: "Nunito", system-ui, sans-serif; padding: 40px max(16px, env(safe-area-inset-left, 0px)); }
+  main { max-width: 760px; margin: 0 auto; display: grid; gap: 24px; }
+  h1 { font-family: "Lilita One", "Trebuchet MS", sans-serif; font-weight: 400; font-size: clamp(36px, 8vw, 56px); margin: 0; color: var(--leaf); }
+  p { margin: 0; color: var(--muted); }
+  .games { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  a.game { display: grid; gap: 8px; padding: 22px; border-radius: 16px; background: var(--card); color: var(--fg); text-decoration: none; border: 2px solid transparent; }
+  a.game:hover, a.game:focus-visible { border-color: var(--lava); outline: none; }
+  a.game h2 { font-family: "Lilita One", "Trebuchet MS", sans-serif; font-weight: 400; font-size: 28px; margin: 0; }
+  a.game span { color: var(--lava); font-weight: 800; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Family Games</h1>
+  <p>Pick a game and play right in your browser.</p>
+  <div class="games">
+    <a class="game" href="snakes-and-ladders/">
+      <h2>Snakes &amp; Ladders</h2>
+      <p>The classic race to 100, with shields, swords, mines and a helicopter.</p>
+      <span>Play →</span>
+    </a>
+    <a class="game" href="dino-escape/">
+      <h2>Dino Escape</h2>
+      <p>Work together to outrun a T-rex across five wild stages.</p>
+      <span>Play →</span>
+    </a>
+  </div>
+</main>
+</body>
+</html>
