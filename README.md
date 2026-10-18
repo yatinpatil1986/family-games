@@ -6,7 +6,7 @@ Kid-friendly board games for family game night. Each game is a single HTML file:
 
 ### [Snakes & Ladders](snakes-and-ladders/)
 The classic 100-square board with extras:
-- **Power-ups:** shield (block a snake), sword (chop a snake for good), gun (shoot any snake), and mine (hide it on a square; whoever steps on it gets blasted to a random spot).
+- **Power-ups:** shield (block a snake), sword (chop a snake for good), gun (shoot any snake), mace (bonk a snake so it moves to a random new spot), and mine (hide it on a square; whoever steps on it gets blasted to a random spot).
 - **Helicopter:** lands on a random square for 6 turns. End your move on it or next to it and it flies you 2 rows up.
 - Sounds, 2–4 players, and any mix of humans and computer players.
 
